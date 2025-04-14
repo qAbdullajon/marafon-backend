@@ -1,3 +1,5 @@
+const moment = require("moment");
+const registerService = require("../service/register.service");
 const userService = require("../service/user.service");
 
 class UserCantroller {
@@ -36,6 +38,51 @@ class UserCantroller {
 
       users.forEach((user) => {
         worksheet.addRow(user);
+      });
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader("Content-Disposition", "attachment; filename=users.xlsx");
+
+      await workbook.xlsx.write(res);
+      res.end();
+    } catch (error) {
+      next(error);
+    }
+  }
+  async register(req, res, next) {
+    try {
+      const { name, phone } = req.body;
+      const post = await registerService.create(name, phone);
+      res.status(201).json(post);
+    } catch (error) {
+      next(error);
+    }
+  }
+  async downloadRegisterExcel(req, res, next) {
+    try {
+      const users = await registerService.getAll();
+
+      const ExcelJS = require("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Users");
+
+      worksheet.columns = [
+        { header: "ID", key: "_id", width: 30 },
+        { header: "Name", key: "name", width: 30 },
+        { header: "Phone", key: "phone", width: 20 },
+        { header: "Created At", key: "createdAt", width: 30 },
+      ];
+
+      users.forEach((user) => {
+        worksheet.addRow({
+          _id: user._id,
+          name: user.name,
+          phone: user.phone,
+          createdAt: moment(user.createdAt).format("DD.MM.YYYY HH:mm"),
+        });
       });
 
       res.setHeader(
